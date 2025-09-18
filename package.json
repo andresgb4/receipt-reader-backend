@@ -1,0 +1,23 @@
+{
+  "name": "receipt-reader-backend",
+  "version": "1.0.0",
+  "description": "receipt reader backend",
+  "homepage": "https://github.com/andresgb4/receipt-reader-backend#readme",
+  "bugs": {
+    "url": "https://github.com/andresgb4/receipt-reader-backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andresgb4/receipt-reader-backend.git"
+  },
+  "license": "ISC",
+  "author": "Andres Gutierrez Bravo",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
