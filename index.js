@@ -3,6 +3,7 @@ const multer = require('multer');
 const dotenv = require('dotenv');
 dotenv.config();
 
+const pool = require('./db');
 const DocumentProcessorServiceClient = require('@google-cloud/documentai').DocumentProcessorServiceClient;
 process.env.GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
@@ -23,6 +24,7 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
 
         const results = [];
 
+        //Reading each file with Document AI
         for (const file of req.files) {
             const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
 
@@ -46,6 +48,7 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
             }
         }
 
+        //Cleaning up the results from the Document AI
         const cleanDocs = [];
 
         for (const doc of results) {
@@ -72,7 +75,17 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
                         break;
                 }
             });
-            cleanDocs.push(cleanDoc);
+
+            // Save to DB
+            const query = `
+                INSERT INTO receipts (merchant, total, purchase_date)
+                VALUES ($1, $2, $3)
+                RETURNING *;
+            `;
+            const values = [cleanDoc.merchant, cleanDoc.total, cleanDoc.date];
+            const { rows } = await pool.query(query, values);
+
+            cleanDocs.push(rows[0]);
         }
         res.json(cleanDocs);
     }
@@ -83,7 +96,7 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
 })
 
 app.get('/', (req, res) => {
-  res.send('Hello World! with docker2')
+  res.send('Online')
 })
 
 app.listen(port, () => {
