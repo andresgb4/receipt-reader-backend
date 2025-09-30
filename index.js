@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const cors = require('cors');
 const dbOperations = require('./db/dbOperations');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -15,6 +16,8 @@ const docClient = new DocumentProcessorServiceClient();
 const projectId = process.env.PROJECT_ID;
 const location = process.env.LOCATION;
 const processorId = process.env.PROCESSOR_ID;
+
+app.use(cors());
 
 app.post('/readReceipt', upload.array('files'), async (req, res) => {
     try {
@@ -148,6 +151,6 @@ app.get('/', (req, res) => {
   res.send('Online')
 })
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Example app listening on port ${port}`)
 })
