@@ -12,14 +12,17 @@ const insertReceipt = async (merchant, total, purchase_date) => {
 }
 
 const getReceipts = async () => {
-    const query = `SELECT * FROM receipts ORDER BY id DESC;`;
+    const query = `SELECT id, merchant, total, purchase_date::date::text AS purchase_date
+        FROM receipts 
+        ORDER BY id DESC;`;
     const { rows } = await pool.query(query);
     return rows;
 }
 
 const getReceiptsbyMonth = async (month, year) => {
     const query = `
-        SELECT * FROM receipts 
+        SELECT id, merchant, total, purchase_date::date::text AS purchase_date
+        FROM receipts 
         WHERE EXTRACT(MONTH FROM purchase_date) = $1 
         AND EXTRACT(YEAR FROM purchase_date) = $2
         ORDER BY id DESC;
