@@ -27,6 +27,8 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
 
         const results = [];
 
+        //One by one
+        /*
         //Reading each file with Document AI
         for (const file of req.files) {
             const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
@@ -49,7 +51,32 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
             if (result.document) {
                 results.push(result.document);
             }
-        }
+        }*/
+
+        //Concurrent processing
+        const processPromises = req.files.map(async (file) => {
+            const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
+            
+            const request = {
+                name,
+                rawDocument: {
+                    content: file.buffer,
+                    mimeType: file.mimetype,
+                },
+                fieldMask: [
+                    "document.entities.total_amount",
+                    "document.entities.net_amount",
+                    "document.entities.supplier_name",
+                    "document.entities.receipt_date"
+                ],
+            };
+
+            const [result] = await docClient.processDocument(request);
+            return result.document;
+        });
+
+        const processedDocuments = await Promise.all(processPromises);
+        results.push(...processedDocuments);
 
         //Cleaning up the results from the Document AI
         const cleanDocs = [];
@@ -71,6 +98,7 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
                         } else {
                             cleanDoc.total = entity.mentionText;
                         }
+                        break;
                     case 'receipt_date':
                         cleanDoc.date = entity.normalizedValue?.dateValue 
                             ? `${entity.normalizedValue.dateValue.year}-${entity.normalizedValue.dateValue.month}-${entity.normalizedValue.dateValue.day}`
@@ -83,7 +111,7 @@ app.post('/readReceipt', upload.array('files'), async (req, res) => {
             const savedReceipt = await dbOperations.insertReceipt(
                 cleanDoc.merchant || 'Unknown Merchant', 
                 cleanDoc.total || 0, 
-                cleanDoc.date || new Date().toISOString().split('T')[0]
+                cleanDoc.date || new Date().toISOString()
             );
             cleanDocs.push(savedReceipt);
         }
