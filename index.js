@@ -19,6 +19,12 @@ const processorId = process.env.PROCESSOR_ID;
 
 app.use(cors());
 
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 app.post("/readReceipt", upload.array("files"), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
