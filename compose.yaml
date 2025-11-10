@@ -13,9 +13,18 @@ services:
       context: .
     environment:
       NODE_ENV: production
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      PROJECT_ID: ${PROJECT_ID}
+      LOCATION: ${LOCATION}
+      PROCESSOR_ID: ${PROCESSOR_ID}
+      PORT: ${PORT:-8080}
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT:-5432}
     ports:
       - 8080:8080
-
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
 # start the database before your application. The `db-data` volume persists the
