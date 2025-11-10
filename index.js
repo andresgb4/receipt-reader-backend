@@ -5,8 +5,8 @@ const dbOperations = require("./db/dbOperations");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const DocumentProcessorServiceClient = require("@google-cloud/documentai").DocumentProcessorServiceClient;
-process.env.GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+const DocumentProcessorServiceClient =
+	require("@google-cloud/documentai").DocumentProcessorServiceClient;
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -21,149 +21,149 @@ app.use(cors());
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
+	console.log(`${req.method} ${req.path}`);
+	next();
 });
 
 app.post("/readReceipt", upload.array("files"), async (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).send("No files uploaded.");
-    }
+	try {
+		if (!req.files || req.files.length === 0) {
+			return res.status(400).send("No files uploaded.");
+		}
 
-    const results = [];
+		const results = [];
 
-    //Concurrent processing
-    const processPromises = req.files.map(async (file) => {
-      const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
+		//Concurrent processing
+		const processPromises = req.files.map(async (file) => {
+			const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
 
-      const request = {
-        name,
-        rawDocument: {
-          content: file.buffer,
-          mimeType: file.mimetype,
-        },
-        fieldMask: [
-          "document.entities.total_amount",
-          "document.entities.net_amount",
-          "document.entities.supplier_name",
-          "document.entities.receipt_date",
-        ],
-      };
+			const request = {
+				name,
+				rawDocument: {
+					content: file.buffer,
+					mimeType: file.mimetype,
+				},
+				fieldMask: [
+					"document.entities.total_amount",
+					"document.entities.net_amount",
+					"document.entities.supplier_name",
+					"document.entities.receipt_date",
+				],
+			};
 
-      const [result] = await docClient.processDocument(request);
-      return result.document;
-    });
+			const [result] = await docClient.processDocument(request);
+			return result.document;
+		});
 
-    const processedDocuments = await Promise.all(processPromises);
-    results.push(...processedDocuments);
+		const processedDocuments = await Promise.all(processPromises);
+		results.push(...processedDocuments);
 
-    //Cleaning up the results from the Document AI
-    const cleanDocs = [];
+		//Cleaning up the results from the Document AI
+		const cleanDocs = [];
 
-    for (const doc of results) {
-      if (!doc.entities) continue;
+		for (const doc of results) {
+			if (!doc.entities) continue;
 
-      const cleanDoc = {};
+			const cleanDoc = {};
 
-      doc.entities.forEach((entity) => {
-        switch (entity.type) {
-          case "supplier_name":
-            cleanDoc.merchant =
-              entity.normalizedValue?.text || entity.mentionText;
-            break;
-          case "total_amount":
-            if (entity.normalizedValue?.moneyValue) {
-              const { units, nanos } = entity.normalizedValue.moneyValue;
-              cleanDoc.total = Number(units) + Number(nanos || 0) / 1e9;
-            } else {
-              cleanDoc.total = entity.mentionText;
-            }
-            break;
-          case "receipt_date":
-            cleanDoc.date = entity.normalizedValue?.dateValue
-              ? `${entity.normalizedValue.dateValue.year}-${entity.normalizedValue.dateValue.month}-${entity.normalizedValue.dateValue.day}`
-              : entity.mentionText;
-            break;
-        }
-      });
+			doc.entities.forEach((entity) => {
+				switch (entity.type) {
+					case "supplier_name":
+						cleanDoc.merchant =
+							entity.normalizedValue?.text || entity.mentionText;
+						break;
+					case "total_amount":
+						if (entity.normalizedValue?.moneyValue) {
+							const { units, nanos } = entity.normalizedValue.moneyValue;
+							cleanDoc.total = Number(units) + Number(nanos || 0) / 1e9;
+						} else {
+							cleanDoc.total = entity.mentionText;
+						}
+						break;
+					case "receipt_date":
+						cleanDoc.date = entity.normalizedValue?.dateValue
+							? `${entity.normalizedValue.dateValue.year}-${entity.normalizedValue.dateValue.month}-${entity.normalizedValue.dateValue.day}`
+							: entity.mentionText;
+						break;
+				}
+			});
 
-      // Save to DB
-      const savedReceipt = await dbOperations.insertReceipt(
-        cleanDoc.merchant || "Unknown Merchant",
-        cleanDoc.total || 0,
-        cleanDoc.date || new Date().toISOString()
-      );
-      cleanDocs.push(savedReceipt);
-    }
-    res.json(cleanDocs);
-  } catch (error) {
-    console.error("Error processing document:", error);
-    res.status(500).send("Error processing document.");
-  }
+			// Save to DB
+			const savedReceipt = await dbOperations.insertReceipt(
+				cleanDoc.merchant || "Unknown Merchant",
+				cleanDoc.total || 0,
+				cleanDoc.date || new Date().toISOString()
+			);
+			cleanDocs.push(savedReceipt);
+		}
+		res.json(cleanDocs);
+	} catch (error) {
+		console.error("Error processing document:", error);
+		res.status(500).send("Error processing document.");
+	}
 });
 
 app.get("/receipts", async (req, res) => {
-  try {
-    const receipts = await dbOperations.getReceipts();
-    res.json(receipts);
-  } catch (error) {
-    console.error("Error fetching receipts:", error);
-    res.status(500).send("Error fetching receipts.");
-  }
+	try {
+		const receipts = await dbOperations.getReceipts();
+		res.json(receipts);
+	} catch (error) {
+		console.error("Error fetching receipts:", error);
+		res.status(500).send("Error fetching receipts.");
+	}
 });
 
 app.get("/receipts/:month/:year", async (req, res) => {
-  const { month, year } = req.params;
-  try {
-    const receipts = await dbOperations.getReceiptsbyMonth(month, year);
-    res.json(receipts);
-  } catch (error) {
-    console.error("Error fetching receipts by month:", error);
-    res.status(500).send("Error fetching receipts by month.");
-  }
+	const { month, year } = req.params;
+	try {
+		const receipts = await dbOperations.getReceiptsbyMonth(month, year);
+		res.json(receipts);
+	} catch (error) {
+		console.error("Error fetching receipts by month:", error);
+		res.status(500).send("Error fetching receipts by month.");
+	}
 });
 
 app.delete("/receipt/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const deletedReceipt = await dbOperations.deleteReceipt(id);
-    if (deletedReceipt) {
-      res.json(deletedReceipt);
-    } else {
-      res.status(404).send("Receipt not found.");
-    }
-  } catch (error) {
-    console.error("Error deleting receipt:", error);
-    res.status(500).send("Error deleting receipt.");
-  }
+	const { id } = req.params;
+	try {
+		const deletedReceipt = await dbOperations.deleteReceipt(id);
+		if (deletedReceipt) {
+			res.json(deletedReceipt);
+		} else {
+			res.status(404).send("Receipt not found.");
+		}
+	} catch (error) {
+		console.error("Error deleting receipt:", error);
+		res.status(500).send("Error deleting receipt.");
+	}
 });
 
 app.put("/receipt/:id", express.json(), async (req, res) => {
-  const { id } = req.params;
-  const { merchant, total, purchase_date } = req.body;
-  try {
-    const updatedReceipt = await dbOperations.updateReceipt(
-      id,
-      merchant,
-      total,
-      purchase_date
-    );
-    if (updatedReceipt) {
-      res.json(updatedReceipt);
-    } else {
-      res.status(404).send("Receipt not found.");
-    }
-  } catch (error) {
-    console.error("Error updating receipt:", error);
-    res.status(500).send("Error updating receipt.");
-  }
+	const { id } = req.params;
+	const { merchant, total, purchase_date } = req.body;
+	try {
+		const updatedReceipt = await dbOperations.updateReceipt(
+			id,
+			merchant,
+			total,
+			purchase_date
+		);
+		if (updatedReceipt) {
+			res.json(updatedReceipt);
+		} else {
+			res.status(404).send("Receipt not found.");
+		}
+	} catch (error) {
+		console.error("Error updating receipt:", error);
+		res.status(500).send("Error updating receipt.");
+	}
 });
 
 app.get("/", (req, res) => {
-  res.send("Online");
+	res.send("Online");
 });
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Example app listening on port ${port}`);
+	console.log(`Example app listening on port ${port}`);
 });
