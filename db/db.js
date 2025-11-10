@@ -10,7 +10,8 @@ const pool = new Pool({
 	ssl:
 		process.env.DB_HOST &&
 		process.env.DB_HOST !== "localhost" &&
-		process.env.DB_HOST !== "127.0.0.1"
+		process.env.DB_HOST !== "127.0.0.1" &&
+		!process.env.DB_HOST.startsWith("/cloudsql/")
 			? { rejectUnauthorized: false }
 			: false,
 });
